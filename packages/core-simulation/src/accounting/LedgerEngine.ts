@@ -9,9 +9,9 @@ import {
 export class LedgerEngine {
   private journal: JournalEntry[] = [];
   private accounts: Map<string, number> = new Map();
-  private accumulatedNOL: number = 0; // Net Operating Loss tax shield carryforward
+  private accumulatedNOL: number = 0;
 
-  constructor(initialCash: number = 250000) {
+  constructor(initialCash: number = 25) {
     this.accounts.set('ASSET:Cash', initialCash);
     this.accounts.set('EQUITY:CommonStock', initialCash);
   }
@@ -32,19 +32,18 @@ export class LedgerEngine {
       ...entry
     };
 
-    // Apply Debits (Assets & Expenses increase with Debit; Liabilities, Equity & Revenue decrease)
     for (const d of entry.debits) {
       const current = this.accounts.get(d.account) || 0;
       this.accounts.set(d.account, current + d.amount);
     }
 
-    // Apply Credits (Assets & Expenses decrease with Credit; Liabilities, Equity & Revenue increase)
     for (const c of entry.credits) {
       const current = this.accounts.get(c.account) || 0;
       this.accounts.set(c.account, current - c.amount);
     }
 
     this.journal.push(journalEntry);
+    if (this.journal.length > 100) this.journal.shift();
     return journalEntry;
   }
 
@@ -52,17 +51,21 @@ export class LedgerEngine {
     return this.accounts.get(account) || 0;
   }
 
+  public getJournalEntries(): JournalEntry[] {
+    return [...this.journal].reverse();
+  }
+
   public generateBalanceSheet(
     marketableSecuritiesVal: number = 0,
     receivablesVal: number = 0,
     inventoryVal: number = 0,
-    ppeGrossVal: number = 500000,
-    accumulatedDeprVal: number = 50000,
-    intangiblesVal: number = 100000,
-    payablesVal: number = 15000,
-    shortTermDebtVal: number = 50000,
-    longTermDebtVal: number = 200000,
-    commonStockVal: number = 250000,
+    ppeGrossVal: number = 0,
+    accumulatedDeprVal: number = 0,
+    intangiblesVal: number = 0,
+    payablesVal: number = 0,
+    shortTermDebtVal: number = 0,
+    longTermDebtVal: number = 0,
+    commonStockVal: number = 25,
     retainedEarningsVal: number = 0
   ): BalanceSheet {
     const cash = Math.max(0, this.getAccountBalance('ASSET:Cash'));
@@ -76,8 +79,6 @@ export class LedgerEngine {
       intangiblesVal;
 
     const totalLiabilities = payablesVal + shortTermDebtVal + longTermDebtVal;
-    
-    // Balanced equity calculation
     const calculatedRetainedEarnings = totalAssets - totalLiabilities - commonStockVal;
 
     return {
@@ -110,25 +111,26 @@ export class LedgerEngine {
     smExpense: number,
     rdExpense: number,
     gaExpense: number,
-    depreciation: number,
-    interestExpense: number,
-    interestIncome: number,
+    deprecExpense: number = 0,
+    interestExpense: number = 0,
     taxRate: number = 0.21
   ): IncomeStatement {
     const grossProfit = grossRevenue - cogs;
     const operatingExpenses = smExpense + rdExpense + gaExpense;
     const ebitda = grossProfit - operatingExpenses;
-    const ebit = ebitda - depreciation;
-    const netInterest = interestExpense - interestIncome;
-    const ebt = ebit - netInterest;
+    const ebit = ebitda - deprecExpense;
+    const ebt = ebit - interestExpense;
 
     let taxExpense = 0;
     if (ebt > 0) {
-      const taxableAfterNOL = Math.max(0, ebt - this.accumulatedNOL);
-      this.accumulatedNOL = Math.max(0, this.accumulatedNOL - ebt);
-      taxExpense = taxableAfterNOL * taxRate;
+      if (this.accumulatedNOL > 0) {
+        const taxableShield = Math.min(this.accumulatedNOL, ebt * 0.8);
+        taxExpense = Math.max(0, (ebt - taxableShield) * taxRate);
+        this.accumulatedNOL -= taxableShield;
+      } else {
+        taxExpense = ebt * taxRate;
+      }
     } else {
-      // Accumulate loss as tax shield carryforward
       this.accumulatedNOL += Math.abs(ebt);
     }
 
@@ -143,10 +145,10 @@ export class LedgerEngine {
       generalAndAdmin: gaExpense,
       operatingExpenses,
       ebitda,
-      depreciationAndAmortization: depreciation,
+      depreciationAndAmortization: deprecExpense,
       ebit,
       interestExpense,
-      interestIncome,
+      interestIncome: 0,
       ebt,
       taxExpense,
       netIncome
@@ -154,83 +156,59 @@ export class LedgerEngine {
   }
 
   public generateCashFlowStatement(
-    income: IncomeStatement,
-    changeInNWC: number,
-    capEx: number,
-    investments: number,
-    debtDelta: number,
-    equityDelta: number,
-    dividendsPaid: number
+    netIncome: number,
+    depreciation: number,
+    changeInWorkingCapital: number,
+    capex: number,
+    debtIssuanceNet: number,
+    equityIssuanceNet: number,
+    dividends: number
   ): CashFlowStatement {
-    const cashFromOperations = income.netIncome + income.depreciationAndAmortization - changeInNWC;
-    const cashFromInvesting = -capEx - investments;
-    const cashFromFinancing = debtDelta + equityDelta - dividendsPaid;
+    const cashFromOperations = netIncome + depreciation - changeInWorkingCapital;
+    const cashFromInvesting = -capex;
+    const cashFromFinancing = debtIssuanceNet + equityIssuanceNet - dividends;
     const netCashFlow = cashFromOperations + cashFromInvesting + cashFromFinancing;
 
     return {
-      netIncome: income.netIncome,
-      depreciation: income.depreciationAndAmortization,
-      changeInWorkingCapital: changeInNWC,
+      netIncome,
+      depreciation,
+      changeInWorkingCapital,
       cashFromOperations,
-      capitalExpenditures: capEx,
-      acquisitionsAndInvestments: investments,
+      capitalExpenditures: capex,
+      acquisitionsAndInvestments: 0,
       cashFromInvesting,
-      debtIssuedOrRepaid: debtDelta,
-      equityIssuedOrBoughtBack: equityDelta,
-      dividendsPaid,
+      debtIssuedOrRepaid: debtIssuanceNet,
+      equityIssuedOrBoughtBack: equityIssuanceNet,
+      dividendsPaid: dividends,
       cashFromFinancing,
       netCashFlow
     };
   }
 
   public calculateAltmanZScore(
-    workingCapital: number,
+    cash: number,
     retainedEarnings: number,
     ebit: number,
-    marketValueOfEquity: number,
-    sales: number,
+    marketCap: number,
+    revenue: number,
     totalAssets: number,
     totalLiabilities: number
   ): { zScore: number; distressRating: 'SAFE' | 'GREY' | 'DISTRESS' } {
-    if (totalAssets <= 0 || totalLiabilities <= 0) {
-      return { zScore: 3.5, distressRating: 'SAFE' };
-    }
+    if (totalAssets <= 0) return { zScore: 3.5, distressRating: 'SAFE' };
 
+    const workingCapital = Math.max(0, cash - (totalLiabilities * 0.2));
     const x1 = workingCapital / totalAssets;
     const x2 = retainedEarnings / totalAssets;
     const x3 = ebit / totalAssets;
-    const x4 = marketValueOfEquity / totalLiabilities;
-    const x5 = sales / totalAssets;
+    const x4 = marketCap / Math.max(1, totalLiabilities);
+    const x5 = revenue / totalAssets;
 
-    const zScore = 1.2 * x1 + 1.4 * x2 + 3.3 * x3 + 0.6 * x4 + 0.999 * x5;
+    const z = 1.2 * x1 + 1.4 * x2 + 3.3 * x3 + 0.6 * x4 + 0.999 * x5;
 
     let distressRating: 'SAFE' | 'GREY' | 'DISTRESS' = 'SAFE';
-    if (zScore < 1.81) distressRating = 'DISTRESS';
-    else if (zScore <= 2.99) distressRating = 'GREY';
+    if (z < 1.81) distressRating = 'DISTRESS';
+    else if (z < 2.99) distressRating = 'GREY';
 
-    return { zScore, distressRating };
-  }
-
-  public calculateCovenants(
-    ebitda: number,
-    interestExpense: number,
-    principalRepayment: number,
-    totalDebt: number
-  ): {
-    dscr: number;
-    leverage: number;
-    interestCoverage: number;
-    isCompliant: boolean;
-  } {
-    const dscr = (principalRepayment + interestExpense > 0)
-      ? ebitda / (principalRepayment + interestExpense)
-      : 99.0;
-    
-    const leverage = ebitda > 0 ? totalDebt / ebitda : 99.0;
-    const interestCoverage = interestExpense > 0 ? (ebitda - 0) / interestExpense : 99.0;
-
-    const isCompliant = dscr >= 1.25 && leverage <= 4.5 && interestCoverage >= 2.0;
-
-    return { dscr, leverage, interestCoverage, isCompliant };
+    return { zScore: z, distressRating };
   }
 }

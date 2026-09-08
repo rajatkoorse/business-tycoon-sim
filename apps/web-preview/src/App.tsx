@@ -197,6 +197,13 @@ export default function App() {
     setChatInput('');
   };
 
+  const playerNetWorth =
+    summary.cash +
+    (summary.marketCap || 0) +
+    sim.cryptoRigs.reduce((s, r) => s + r.cost, 0) +
+    sim.aiClusters.reduce((s, a) => s + a.cost, 0) +
+    sim.realEstate.reduce((s, b) => s + b.cost, 0);
+
   const navItems = [
     { id: 'LIFE', label: 'Life & Lifestyle', icon: User, badge: `${summary.life.happiness}% Happy` },
     { id: 'EDUCATION', label: 'Education & Gigs', icon: GraduationCap, badge: summary.life.streakCount > 0 ? `${summary.life.streakCount}x Streak` : undefined },
@@ -354,9 +361,7 @@ export default function App() {
           )}
 
           {activeTab === 'FINANCE' && (
-            <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6">
-              <FinanceTab sim={sim} summary={summary} />
-            </div>
+            <FinanceTab sim={sim} summary={summary} />
           )}
 
           {activeTab === 'WORKFORCE' && (
@@ -392,15 +397,17 @@ export default function App() {
           )}
 
           {activeTab === 'MULTIPLAYER' && (
-            <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6">
-              <MultiplayerTab
-                multiplayer={multiplayer}
-                chatInput={chatInput}
-                setChatInput={setChatInput}
-                chatChannel={chatChannel}
-                handleSendChat={handleSendChat}
-              />
-            </div>
+            <MultiplayerTab
+              multiplayer={multiplayer}
+              playerNetWorth={playerNetWorth}
+              playerCompanyName={summary.companyName}
+              playerTicker={summary.ticker}
+              playerStockPrice={summary.stockPrice}
+              chatInput={chatInput}
+              setChatInput={setChatInput}
+              chatChannel={chatChannel}
+              handleSendChat={handleSendChat}
+            />
           )}
         </main>
       </div>
