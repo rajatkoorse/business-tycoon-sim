@@ -5,7 +5,8 @@ import {
   GameSimulation,
   HustleGig,
   OrderSide,
-  OrderType
+  OrderType,
+  StorageManager
 } from '@tycoon/core-simulation';
 import { MultiplayerClient } from '@tycoon/network-client';
 import { ExecutiveHeader } from './components/ExecutiveHeader';
@@ -34,7 +35,11 @@ import {
 } from 'lucide-react';
 
 export default function App() {
-  const [sim] = useState(() => new GameSimulation());
+  const [sim] = useState(() => {
+    const s = new GameSimulation();
+    StorageManager.loadFromLocalStorage(s);
+    return s;
+  });
   const [multiplayer] = useState(() => new MultiplayerClient());
 
   // Active Tab
@@ -62,15 +67,23 @@ export default function App() {
   const [chatInput, setChatInput] = useState('');
   const [chatChannel, setChatChannel] = useState<'GLOBAL' | 'SYNDICATE' | 'WARFARE'>('GLOBAL');
 
-  // Real-Time Simulation Loop
+  // Real-Time Simulation Loop & Auto-Save
   useEffect(() => {
     if (simSpeed === 0) return;
 
     const intervalMs = Math.max(100, 1000 / simSpeed);
+    let autoSaveCounter = 0;
+
     const timer = setInterval(() => {
       sim.stepDailyTick();
       setSummary(sim.getSummary());
       setEventLogs([...sim.eventLog]);
+
+      // Periodic Auto-Save to Database (every 5 seconds)
+      autoSaveCounter += 1;
+      if (autoSaveCounter % 5 === 0) {
+        StorageManager.saveToLocalStorage(sim);
+      }
 
       // Market simulation (if listed)
       if (sim.isIPOListed && Math.random() < 0.4) {
@@ -94,8 +107,56 @@ export default function App() {
   }, [simSpeed, summary.stockPrice]);
 
   const handleRefresh = () => {
+    StorageManager.saveToLocalStorage(sim);
     setSummary(sim.getSummary());
     setEventLogs([...sim.eventLog]);
+  };
+
+  const handleManualSave = () => {
+    if (StorageManager.saveToLocalStorage(sim)) {
+      sim.addLog('Game database saved locally to IndexedDB/LocalStorage!', 'SUCCESS');
+      handleRefresh();
+    }
+  };
+
+  const handleResetGame = () => {
+    if (window.confirm('Are you sure you want to reset your career and start a New Game from $25?')) {
+      StorageManager.clearSave();
+      window.location.reload();
+    }
+  };
+
+  const handleExportSave = () => {
+    const json = StorageManager.exportSaveFile(sim);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Empire_Save_${sim.companyName.replace(/\\s+/g, '_')}_Day${sim.currentDay}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    sim.addLog('Game database export downloaded!', 'SUCCESS');
+    handleRefresh();
+  };
+
+  const handleImportSave = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (re) => {
+        const text = re.target?.result as string;
+        if (text && StorageManager.importSaveFile(sim, text)) {
+          StorageManager.saveToLocalStorage(sim);
+          handleRefresh();
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
   };
 
   const handleOpenGigChallenge = (gig: HustleGig) => {
@@ -159,6 +220,10 @@ export default function App() {
         simSpeed={simSpeed}
         setSimSpeed={setSimSpeed}
         openTab={setActiveTab}
+        onSave={handleManualSave}
+        onReset={handleResetGame}
+        onExport={handleExportSave}
+        onImport={handleImportSave}
       />
 
       {/* 2. MAIN APP LAYOUT */}

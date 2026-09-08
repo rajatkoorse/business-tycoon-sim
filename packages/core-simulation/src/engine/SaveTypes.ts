@@ -1,0 +1,42 @@
+export interface SerializedGameState {
+  version: number;
+  timestamp: number;
+  stage: string;
+  level: number;
+  xp: number;
+  xpToNext: number;
+  isIncorporated: boolean;
+  isIPOListed: boolean;
+  companyName: string;
+  ticker: string;
+  stockPrice: number;
+  totalShares: number;
+  btcPriceUSD: number;
+  currentDay: number;
+  hqPrestige: number;
+  perkTier: number;
+  cash: number;
+  cryptoRigs: any[];
+  aiClusters: any[];
+  realEstate: any[];
+  factories: any[];
+  mediaAgencies: any[];
+  greyMarketOps: any[];
+  life: {
+    health: number;
+    happiness: number;
+    smarts: number;
+    charisma: number;
+    energy: number;
+    maxEnergy: number;
+    ageYears: number;
+    ageDays: number;
+    education: string;
+    housing: string;
+    wardrobe: string;
+    diet: string;
+    transit: string;
+    streakCount: number;
+  };
+  eventLog: any[];
+}

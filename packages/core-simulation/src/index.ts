@@ -6,4 +6,6 @@ export * from './workforce/WorkforceEngine';
 export * from './warfare/CorporateWarfare';
 export * from './challenges/QuestionBank';
 export * from './life/LifeEngine';
+export * from './engine/SaveTypes';
+export * from './engine/StorageManager';
 export * from './engine/GameSimulation';

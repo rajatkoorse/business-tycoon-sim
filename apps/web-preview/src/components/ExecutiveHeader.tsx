@@ -14,7 +14,11 @@ import {
   Play,
   Pause,
   FastForward,
-  Award
+  Award,
+  Save,
+  RotateCcw,
+  Download,
+  Upload
 } from 'lucide-react';
 
 interface ExecutiveHeaderProps {
@@ -22,13 +26,21 @@ interface ExecutiveHeaderProps {
   simSpeed: number;
   setSimSpeed: (speed: number) => void;
   openTab: (tab: string) => void;
+  onSave: () => void;
+  onReset: () => void;
+  onExport: () => void;
+  onImport: () => void;
 }
 
 export const ExecutiveHeader: React.FC<ExecutiveHeaderProps> = ({
   summary,
   simSpeed,
   setSimSpeed,
-  openTab
+  openTab,
+  onSave,
+  onReset,
+  onExport,
+  onImport
 }) => {
   const { life } = summary;
 
@@ -71,7 +83,6 @@ export const ExecutiveHeader: React.FC<ExecutiveHeaderProps> = ({
 
       {/* 2. LIFE QUICK GAUGES (BITLIFE TELEMETRY) */}
       <div className="hidden lg:flex items-center gap-4 bg-black/40 border border-slate-800/80 rounded-2xl px-4 py-1.5">
-        {/* Health */}
         <div
           onClick={() => openTab('LIFE')}
           className="flex items-center gap-1.5 text-xs font-mono cursor-pointer hover:opacity-80 transition"
@@ -81,7 +92,6 @@ export const ExecutiveHeader: React.FC<ExecutiveHeaderProps> = ({
           <span className="text-white font-bold">{life.health}%</span>
         </div>
 
-        {/* Happiness */}
         <div
           onClick={() => openTab('LIFE')}
           className="flex items-center gap-1.5 text-xs font-mono cursor-pointer hover:opacity-80 transition"
@@ -91,7 +101,6 @@ export const ExecutiveHeader: React.FC<ExecutiveHeaderProps> = ({
           <span className="text-white font-bold">{life.happiness}%</span>
         </div>
 
-        {/* Smarts */}
         <div
           onClick={() => openTab('LIFE')}
           className="flex items-center gap-1.5 text-xs font-mono cursor-pointer hover:opacity-80 transition"
@@ -101,7 +110,6 @@ export const ExecutiveHeader: React.FC<ExecutiveHeaderProps> = ({
           <span className="text-white font-bold">{life.smarts}%</span>
         </div>
 
-        {/* Charisma */}
         <div
           onClick={() => openTab('LIFE')}
           className="flex items-center gap-1.5 text-xs font-mono cursor-pointer hover:opacity-80 transition"
@@ -111,7 +119,6 @@ export const ExecutiveHeader: React.FC<ExecutiveHeaderProps> = ({
           <span className="text-white font-bold">{life.charisma}%</span>
         </div>
 
-        {/* Energy */}
         <div
           onClick={() => openTab('LIFE')}
           className="flex items-center gap-1.5 text-xs font-mono cursor-pointer hover:opacity-80 transition"
@@ -124,7 +131,6 @@ export const ExecutiveHeader: React.FC<ExecutiveHeaderProps> = ({
 
       {/* 3. CASH & FINANCIAL METRICS */}
       <div className="flex items-center gap-4 md:gap-6 font-mono">
-        {/* Cash in Pocket */}
         <div
           onClick={() => openTab('FINANCE')}
           className="cursor-pointer flex flex-col text-right hover:opacity-80 transition"
@@ -135,7 +141,6 @@ export const ExecutiveHeader: React.FC<ExecutiveHeaderProps> = ({
           </span>
         </div>
 
-        {/* Daily Burn Rate */}
         <div className="hidden sm:flex flex-col text-right">
           <span className="text-[10px] text-slate-400 uppercase tracking-wider">Living Cost</span>
           <span className="font-bold text-xs text-rose-400">
@@ -143,7 +148,6 @@ export const ExecutiveHeader: React.FC<ExecutiveHeaderProps> = ({
           </span>
         </div>
 
-        {/* Stock Price or Passive */}
         {summary.isIPOListed ? (
           <div
             onClick={() => openTab('EXCHANGE')}
@@ -165,35 +169,63 @@ export const ExecutiveHeader: React.FC<ExecutiveHeaderProps> = ({
         ) : null}
       </div>
 
-      {/* 4. SIM CONTROLS */}
-      <div className="flex items-center gap-1.5 bg-black/60 border border-slate-800 rounded-xl p-1 font-mono">
-        <button
-          onClick={() => setSimSpeed(0)}
-          className={`p-1.5 rounded-lg text-xs font-bold transition ${
-            simSpeed === 0 ? 'bg-amber-500 text-black' : 'text-slate-400 hover:text-white'
-          }`}
-          title="Pause"
-        >
-          <Pause className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={() => setSimSpeed(1)}
-          className={`px-2 py-1 rounded-lg text-xs font-bold transition ${
-            simSpeed === 1 ? 'bg-cyan-500 text-black' : 'text-slate-400 hover:text-white'
-          }`}
-          title="Normal Speed"
-        >
-          1x
-        </button>
-        <button
-          onClick={() => setSimSpeed(5)}
-          className={`px-2 py-1 rounded-lg text-xs font-bold transition ${
-            simSpeed === 5 ? 'bg-amber-500 text-black' : 'text-slate-400 hover:text-white'
-          }`}
-          title="Fast Speed (5x)"
-        >
-          5x
-        </button>
+      {/* 4. DATABASE SAVE & SIM SPEED CONTROLS */}
+      <div className="flex items-center gap-2">
+        {/* Database Quick Actions */}
+        <div className="flex items-center gap-1 bg-black/60 border border-slate-800 rounded-xl p-1">
+          <button
+            onClick={onSave}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-400 hover:bg-slate-800 transition"
+            title="Save Database (IndexedDB / LocalStorage)"
+          >
+            <Save className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={onExport}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-400 hover:bg-slate-800 transition"
+            title="Export Save File (JSON)"
+          >
+            <Download className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={onReset}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition"
+            title="Reset Game / New Game"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* Sim Speed */}
+        <div className="flex items-center gap-1 bg-black/60 border border-slate-800 rounded-xl p-1 font-mono">
+          <button
+            onClick={() => setSimSpeed(0)}
+            className={`p-1.5 rounded-lg text-xs font-bold transition ${
+              simSpeed === 0 ? 'bg-amber-500 text-black' : 'text-slate-400 hover:text-white'
+            }`}
+            title="Pause"
+          >
+            <Pause className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => setSimSpeed(1)}
+            className={`px-2 py-1 rounded-lg text-xs font-bold transition ${
+              simSpeed === 1 ? 'bg-cyan-500 text-black' : 'text-slate-400 hover:text-white'
+            }`}
+            title="Normal Speed"
+          >
+            1x
+          </button>
+          <button
+            onClick={() => setSimSpeed(5)}
+            className={`px-2 py-1 rounded-lg text-xs font-bold transition ${
+              simSpeed === 5 ? 'bg-amber-500 text-black' : 'text-slate-400 hover:text-white'
+            }`}
+            title="Fast Speed (5x)"
+          >
+            5x
+          </button>
+        </div>
       </div>
     </header>
   );

@@ -32,6 +32,7 @@ import {
   WARDROBE_DATA,
   WardrobeTier
 } from '../life/LifeEngine';
+import { SerializedGameState } from './SaveTypes';
 
 export type TycoonStage =
   | 'GARAGE_HUSTLER'
@@ -291,6 +292,109 @@ export class GameSimulation {
     if (this.eventLog.length > 60) this.eventLog.pop();
   }
 
+  // EXPORT COMPLETE GAME STATE (DATABASE DUMP)
+  public exportState(): SerializedGameState {
+    return {
+      version: 1,
+      timestamp: Date.now(),
+      stage: this.stage,
+      level: this.level,
+      xp: this.xp,
+      xpToNext: this.xpToNext,
+      isIncorporated: this.isIncorporated,
+      isIPOListed: this.isIPOListed,
+      companyName: this.companyName,
+      ticker: this.ticker,
+      stockPrice: this.stockPrice,
+      totalShares: this.totalShares,
+      btcPriceUSD: this.btcPriceUSD,
+      currentDay: this.currentDay,
+      hqPrestige: this.hqPrestige,
+      perkTier: this.perkTier,
+      cash: this.ledger.getAccountBalance('ASSET:Cash'),
+      cryptoRigs: this.cryptoRigs,
+      aiClusters: this.aiClusters,
+      realEstate: this.realEstate,
+      factories: this.factories,
+      mediaAgencies: this.mediaAgencies,
+      greyMarketOps: this.greyMarketOps,
+      life: {
+        health: this.life.health,
+        happiness: this.life.happiness,
+        smarts: this.life.smarts,
+        charisma: this.life.charisma,
+        energy: this.life.energy,
+        maxEnergy: this.life.maxEnergy,
+        ageYears: this.life.ageYears,
+        ageDays: this.life.ageDays,
+        education: this.life.education,
+        housing: this.life.housing,
+        wardrobe: this.life.wardrobe,
+        diet: this.life.diet,
+        transit: this.life.transit,
+        streakCount: this.life.streakCount
+      },
+      eventLog: this.eventLog
+    };
+  }
+
+  // IMPORT COMPLETE GAME STATE (DATABASE RESTORE)
+  public importState(state: SerializedGameState): boolean {
+    try {
+      this.stage = state.stage as TycoonStage;
+      this.level = state.level || 1;
+      this.xp = state.xp || 0;
+      this.xpToNext = state.xpToNext || 100;
+      this.isIncorporated = !!state.isIncorporated;
+      this.isIPOListed = !!state.isIPOListed;
+      this.companyName = state.companyName || 'Solo Hustler';
+      this.ticker = state.ticker || 'SOLO';
+      this.stockPrice = state.stockPrice || 0;
+      this.totalShares = state.totalShares || 0;
+      this.btcPriceUSD = state.btcPriceUSD || 68450;
+      this.currentDay = state.currentDay || 1;
+      this.hqPrestige = state.hqPrestige || 10;
+      this.perkTier = state.perkTier || 1;
+
+      // Re-initialize ledger with saved cash
+      this.ledger = new LedgerEngine(state.cash || 25);
+
+      this.cryptoRigs = state.cryptoRigs || [];
+      this.aiClusters = state.aiClusters || [];
+      this.realEstate = state.realEstate || [];
+      this.factories = state.factories || [];
+      this.mediaAgencies = state.mediaAgencies || [];
+      this.greyMarketOps = state.greyMarketOps || [];
+
+      if (state.life) {
+        this.life.health = state.life.health ?? 85;
+        this.life.happiness = state.life.happiness ?? 60;
+        this.life.smarts = state.life.smarts ?? 30;
+        this.life.charisma = state.life.charisma ?? 20;
+        this.life.energy = state.life.energy ?? 100;
+        this.life.maxEnergy = state.life.maxEnergy ?? 100;
+        this.life.ageYears = state.life.ageYears ?? 21;
+        this.life.ageDays = state.life.ageDays ?? 1;
+        this.life.education = (state.life.education as EducationTier) || 'UNSKILLED';
+        this.life.housing = (state.life.housing as HousingTier) || 'PARENTS_GARAGE';
+        this.life.wardrobe = (state.life.wardrobe as WardrobeTier) || 'THRIFT_RAGS';
+        this.life.diet = (state.life.diet as DietTier) || 'INSTANT_RAMEN';
+        this.life.transit = (state.life.transit as TransitTier) || 'PUBLIC_BUS';
+        this.life.streakCount = state.life.streakCount || 0;
+      }
+
+      if (state.eventLog && state.eventLog.length > 0) {
+        this.eventLog = state.eventLog;
+      }
+
+      this.addLog('Game save restored successfully!', 'SUCCESS');
+      return true;
+    } catch (e) {
+      console.error('Failed to import state:', e);
+      return false;
+    }
+  }
+
   // Check if player has education needed for a gig
   public canPerformGig(gig: HustleGig): { allowed: boolean; reason?: string } {
     const tierOrder: Record<EducationTier, number> = {
@@ -379,7 +483,7 @@ export class GameSimulation {
 
     if (isCorrect) {
       this.life.streakCount += 1;
-      const streakMultiplier = 1 + Math.min(1.0, this.life.streakCount * 0.1); // +10% per streak up to 2x
+      const streakMultiplier = 1 + Math.min(1.0, this.life.streakCount * 0.1);
       const earnedUSD = Math.round(gig.rewardUSD * question.rewardMultiplier * streakMultiplier);
       const earnedXP = Math.round(gig.xpReward * streakMultiplier);
 
@@ -439,17 +543,14 @@ export class GameSimulation {
       return { success: false, message: `Smarts too low. Required: ${program.minSmarts} Smarts (Current: ${this.life.smarts}). Study more at the library!` };
     }
 
-    // If no answer supplied, return the exam question
     if (selectedOptionIndex === undefined) {
       const examQuestion = getRandomQuestion(tier);
       return { success: true, question: examQuestion, message: `Exam question retrieved for ${program.name}` };
     }
 
-    // Verify exam question
     const question = QUESTION_BANK.find((q) => q.id === questionId) || getRandomQuestion(tier);
     const passed = selectedOptionIndex === question.correctIndex;
 
-    // Deduct tuition fee
     this.ledger.recordTransaction({
       description: `Tuition Fee: ${program.name}`,
       debits: [{ account: 'EXPENSE:Education', amount: program.tuitionCost }],
@@ -661,10 +762,8 @@ export class GameSimulation {
   public stepDailyTick(): SimulationSummary {
     this.currentDay += 1;
 
-    // Step Life Engine (bills, health, happiness, age)
     const lifeTick = this.life.stepDaily();
 
-    // Deduct daily living expenses (Rent, Food, Transit, Clothes upkeep)
     const dailyLivingCost = lifeTick.billsDue;
     const currentCash = this.ledger.getAccountBalance('ASSET:Cash');
     if (currentCash >= dailyLivingCost) {
@@ -674,7 +773,6 @@ export class GameSimulation {
         credits: [{ account: 'ASSET:Cash', amount: dailyLivingCost }]
       });
     } else {
-      // Eviction / Starvation warning
       this.life.happiness = Math.max(0, this.life.happiness - 2);
       this.life.health = Math.max(5, this.life.health - 2);
       if (this.currentDay % 10 === 0) {
@@ -682,11 +780,9 @@ export class GameSimulation {
       }
     }
 
-    // BTC Brownian motion
     const btcShock = (Math.random() - 0.49) * 0.02;
     this.btcPriceUSD = Math.max(10000, this.btcPriceUSD * (1 + btcShock));
 
-    // Automated passive income from owned assets
     let totalPassiveIncomePerSec = 0;
     let totalPowerCostPerSec = 0;
 
@@ -715,7 +811,6 @@ export class GameSimulation {
       totalPassiveIncomePerSec += secYield;
     }
 
-    // Workforce salaries
     let totalSalariesPerSec = 0;
     for (const emp of this.workforce.getEmployees()) {
       totalSalariesPerSec += emp.salary / (365 * 86400) * 2000;
@@ -740,10 +835,8 @@ export class GameSimulation {
       }
     }
 
-    // Heat decay
     this.warfare.stepDailyHeatDecay();
 
-    // Stock price tick
     if (this.isIPOListed) {
       const noise = (Math.random() - 0.495) * 0.01;
       this.stockPrice = Math.max(0.5, this.stockPrice * (1 + noise));
