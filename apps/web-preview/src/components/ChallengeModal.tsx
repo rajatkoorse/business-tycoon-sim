@@ -52,7 +52,7 @@ export const ChallengeModal: React.FC<ChallengeModalProps> = ({
     setHasSubmitted(true);
 
     if (gig) {
-      const res = sim.submitGigChallenge(gig.id, question.id, selectedIdx);
+      const res = sim.submitGigChallenge(gig.id, question, selectedIdx);
       setResult({
         isCorrect: res.isCorrect,
         earnedUSD: res.earnedUSD,
@@ -60,7 +60,7 @@ export const ChallengeModal: React.FC<ChallengeModalProps> = ({
         message: res.message
       });
     } else if (examTier) {
-      const res = sim.enrollAndTakeExam(examTier as any, selectedIdx, question.id);
+      const res = sim.enrollAndTakeExam(examTier as any, selectedIdx, question);
       setResult({
         isCorrect: !!res.passed,
         earnedUSD: 0,

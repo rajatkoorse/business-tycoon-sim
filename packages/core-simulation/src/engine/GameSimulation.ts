@@ -443,7 +443,7 @@ export class GameSimulation {
   // Submit answer for a gig challenge
   public submitGigChallenge(
     gigId: string,
-    questionId: string,
+    questionOrId: string | ChallengeQuestion,
     selectedOptionIndex: number
   ): {
     success: boolean;
@@ -477,7 +477,11 @@ export class GameSimulation {
       };
     }
 
-    const question = QUESTION_BANK.find((q) => q.id === questionId) || this.getQuestionForGig(gigId);
+    const question: ChallengeQuestion =
+      typeof questionOrId === 'object' && questionOrId !== null
+        ? questionOrId
+        : (QUESTION_BANK.find((q) => q.id === questionOrId) || this.getQuestionForGig(gigId));
+
     this.life.energy = Math.max(0, this.life.energy - gig.energyCost);
 
     const isCorrect = selectedOptionIndex === question.correctIndex;
@@ -527,7 +531,11 @@ export class GameSimulation {
   }
 
   // University / Bootcamp Exam Enrollment & Completion
-  public enrollAndTakeExam(tier: EducationTier, selectedOptionIndex?: number, questionId?: string): {
+  public enrollAndTakeExam(
+    tier: EducationTier,
+    selectedOptionIndex?: number,
+    questionOrId?: string | ChallengeQuestion
+  ): {
     success: boolean;
     passed?: boolean;
     question?: ChallengeQuestion;
@@ -549,7 +557,11 @@ export class GameSimulation {
       return { success: true, question: examQuestion, message: `Exam question retrieved for ${program.name}` };
     }
 
-    const question = QUESTION_BANK.find((q) => q.id === questionId) || getRandomQuestion(tier);
+    const question: ChallengeQuestion =
+      typeof questionOrId === 'object' && questionOrId !== null
+        ? questionOrId
+        : (QUESTION_BANK.find((q) => q.id === questionOrId) || getRandomQuestion(tier));
+
     const passed = selectedOptionIndex === question.correctIndex;
 
     this.ledger.recordTransaction({

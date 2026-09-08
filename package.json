@@ -9,6 +9,8 @@
   ],
   "scripts": {
     "dev": "npm --workspace=apps/web-preview run dev",
-    "build": "npm --workspaces run build"
+    "build:core": "npm --workspace=packages/core-simulation run build",
+    "build:web": "npm --workspace=apps/web-preview run build",
+    "build": "npm run build:core && npm run build:web"
   }
 }

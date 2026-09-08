@@ -509,9 +509,13 @@ export const QUESTION_BANK: ChallengeQuestion[] = [
 const recentlySeenIds: string[] = [];
 
 // Helper to shuffle options so correct answer position changes dynamically!
-function shuffleQuestion(q: ChallengeQuestion): ChallengeQuestion {
+export function shuffleQuestion(q: ChallengeQuestion): ChallengeQuestion {
   const correctOptionText = q.options[q.correctIndex];
-  const shuffledOptions = [...q.options].sort(() => Math.random() - 0.5);
+  const shuffledOptions = [...q.options];
+  for (let i = shuffledOptions.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffledOptions[i], shuffledOptions[j]] = [shuffledOptions[j], shuffledOptions[i]];
+  }
   const newCorrectIndex = shuffledOptions.indexOf(correctOptionText);
 
   return {

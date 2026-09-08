@@ -1,0 +1,115 @@
+import { LedgerEngine } from '../accounting/LedgerEngine';
+import { MacroEngine } from '../macro/MacroEngine';
+import { BusinessSectorsEngine } from '../sectors/BusinessSectors';
+import { AIComputeCluster, CommercialBuilding, CryptoMiningRig, FactoryUnit, GreyMarketOp, MediaAgency, SectorType } from '../types';
+import { CorporateWarfareEngine } from '../warfare/CorporateWarfare';
+import { WorkforceEngine } from '../workforce/WorkforceEngine';
+import { ChallengeQuestion, EducationTier, QuestionCategory } from '../challenges/QuestionBank';
+import { DietTier, HousingTier, LifeEngine, LifeStats, TransitTier, WardrobeTier } from '../life/LifeEngine';
+import { SerializedGameState } from './SaveTypes';
+export type TycoonStage = 'GARAGE_HUSTLER' | 'REGISTERED_STARTUP' | 'GROWTH_ENTERPRISE' | 'PUBLIC_CONGLOMERATE';
+export interface HustleGig {
+    id: string;
+    name: string;
+    category: QuestionCategory;
+    requiredTier: EducationTier;
+    description: string;
+    rewardUSD: number;
+    xpReward: number;
+    energyCost: number;
+    minSmarts: number;
+}
+export interface SimulationSummary {
+    companyName: string;
+    ticker: string;
+    stage: TycoonStage;
+    level: number;
+    xp: number;
+    xpToNext: number;
+    stockPrice: number;
+    marketCap: number;
+    cash: number;
+    passiveRevenuePerSec: number;
+    dailyLivingCost: number;
+    monthlyBills: number;
+    dailyExpenses: number;
+    regulatoryHeat: number;
+    macroRegime: string;
+    interestRate: number;
+    inflation: number;
+    currentDay: number;
+    currentQuarter: number;
+    currentYear: number;
+    isIncorporated: boolean;
+    isIPOListed: boolean;
+    life: LifeStats;
+}
+export declare class GameSimulation {
+    ledger: LedgerEngine;
+    sectors: BusinessSectorsEngine;
+    macro: MacroEngine;
+    workforce: WorkforceEngine;
+    warfare: CorporateWarfareEngine;
+    life: LifeEngine;
+    stage: TycoonStage;
+    level: number;
+    xp: number;
+    xpToNext: number;
+    isIncorporated: boolean;
+    isIPOListed: boolean;
+    companyName: string;
+    ticker: string;
+    stockPrice: number;
+    totalShares: number;
+    cryptoRigs: CryptoMiningRig[];
+    aiClusters: AIComputeCluster[];
+    realEstate: CommercialBuilding[];
+    factories: FactoryUnit[];
+    mediaAgencies: MediaAgency[];
+    greyMarketOps: GreyMarketOp[];
+    btcPriceUSD: number;
+    currentDay: number;
+    totalSecondsElapsed: number;
+    hqPrestige: number;
+    perkTier: number;
+    availableGigs: HustleGig[];
+    eventLog: {
+        id: string;
+        timestamp: number;
+        text: string;
+        type: 'INFO' | 'WARN' | 'DANGER' | 'SUCCESS';
+    }[];
+    constructor();
+    addLog(text: string, type?: 'INFO' | 'WARN' | 'DANGER' | 'SUCCESS'): void;
+    exportState(): SerializedGameState;
+    importState(state: SerializedGameState): boolean;
+    canPerformGig(gig: HustleGig): {
+        allowed: boolean;
+        reason?: string;
+    };
+    getQuestionForGig(gigId: string): ChallengeQuestion;
+    submitGigChallenge(gigId: string, questionOrId: string | ChallengeQuestion, selectedOptionIndex: number): {
+        success: boolean;
+        isCorrect: boolean;
+        earnedUSD: number;
+        earnedXP: number;
+        question: ChallengeQuestion;
+        message: string;
+    };
+    enrollAndTakeExam(tier: EducationTier, selectedOptionIndex?: number, questionOrId?: string | ChallengeQuestion): {
+        success: boolean;
+        passed?: boolean;
+        question?: ChallengeQuestion;
+        message: string;
+    };
+    upgradeHousing(tier: HousingTier): boolean;
+    buyWardrobe(tier: WardrobeTier): boolean;
+    setDiet(tier: DietTier): boolean;
+    buyTransit(tier: TransitTier): boolean;
+    addXP(amount: number): void;
+    incorporateBusiness(name: string, ticker: string): boolean;
+    fileIPO(): boolean;
+    buyAsset(sector: SectorType, asset: any): boolean;
+    stepRealtimeTick(): SimulationSummary;
+    getSummary(): SimulationSummary;
+}
