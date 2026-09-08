@@ -599,7 +599,7 @@ export class GameSimulation {
     const data = WARDROBE_DATA[tier];
     const cash = this.ledger.getAccountBalance('ASSET:Cash');
     if (cash < data.buyCost) {
-      this.addLog(`Insufficient funds for wardrobe: $${data.buyCost.toLocaleString()}\`, 'WARN');
+      this.addLog(`Insufficient funds for wardrobe: $${data.buyCost.toLocaleString()}`, 'WARN');
       return false;
     }
 
@@ -762,7 +762,6 @@ export class GameSimulation {
   // REAL-TIME TICK LOOP (Called every real-time second)
   public stepRealtimeTick(): SimulationSummary {
     this.totalSecondsElapsed += 1;
-    // 1 Real day = every 600 real seconds (10 minutes)
     if (this.totalSecondsElapsed % 600 === 0) {
       this.currentDay += 1;
       this.life.ageDays += 1;
