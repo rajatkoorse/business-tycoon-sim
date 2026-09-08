@@ -17,6 +17,7 @@ export interface PlayerProfile {
   stockPrice: number;
   rank: number;
   isYou?: boolean;
+  type: 'HUMAN' | 'AI_INCUMBENT';
   avatarEmoji: string;
   sector: string;
 }
@@ -42,6 +43,7 @@ export class MultiplayerClient {
         stockTicker: 'APEX',
         stockPrice: 185.2,
         rank: 1,
+        type: 'AI_INCUMBENT',
         avatarEmoji: '🏛️',
         sector: 'Conglomerate'
       },
@@ -53,6 +55,7 @@ export class MultiplayerClient {
         stockTicker: 'AEGIS',
         stockPrice: 142.5,
         rank: 2,
+        type: 'AI_INCUMBENT',
         avatarEmoji: '🔬',
         sector: 'Quantum Tech'
       },
@@ -64,6 +67,7 @@ export class MultiplayerClient {
         stockTicker: 'SHIN',
         stockPrice: 98.4,
         rank: 3,
+        type: 'AI_INCUMBENT',
         avatarEmoji: '🤖',
         sector: 'AI Compute'
       },
@@ -75,6 +79,7 @@ export class MultiplayerClient {
         stockTicker: 'VCP',
         stockPrice: 74.1,
         rank: 4,
+        type: 'AI_INCUMBENT',
         avatarEmoji: '📈',
         sector: 'Hedge Fund'
       },
@@ -86,6 +91,7 @@ export class MultiplayerClient {
         stockTicker: 'THRN',
         stockPrice: 48.0,
         rank: 5,
+        type: 'AI_INCUMBENT',
         avatarEmoji: '🏭',
         sector: 'Manufacturing'
       },
@@ -97,6 +103,7 @@ export class MultiplayerClient {
         stockTicker: 'CDEX',
         stockPrice: 32.5,
         rank: 6,
+        type: 'AI_INCUMBENT',
         avatarEmoji: '⚡',
         sector: 'DeFi Crypto'
       },
@@ -108,6 +115,7 @@ export class MultiplayerClient {
         stockTicker: 'MREIT',
         stockPrice: 22.0,
         rank: 7,
+        type: 'AI_INCUMBENT',
         avatarEmoji: '🏢',
         sector: 'Real Estate'
       },
@@ -119,6 +127,7 @@ export class MultiplayerClient {
         stockTicker: 'NOVA',
         stockPrice: 15.4,
         rank: 8,
+        type: 'AI_INCUMBENT',
         avatarEmoji: '📡',
         sector: 'Media'
       },
@@ -130,6 +139,7 @@ export class MultiplayerClient {
         stockTicker: 'ZDAY',
         stockPrice: 8.9,
         rank: 9,
+        type: 'AI_INCUMBENT',
         avatarEmoji: '🛡️',
         sector: 'Cybersecurity'
       },
@@ -141,6 +151,7 @@ export class MultiplayerClient {
         stockTicker: 'SILC',
         stockPrice: 3.2,
         rank: 10,
+        type: 'AI_INCUMBENT',
         avatarEmoji: '💻',
         sector: 'Early Tech'
       },
@@ -152,17 +163,19 @@ export class MultiplayerClient {
         stockTicker: 'LTAX',
         stockPrice: 1.5,
         rank: 11,
+        type: 'AI_INCUMBENT',
         avatarEmoji: '📊',
         sector: 'Accounting'
       },
       {
         playerId: 'RIV-12',
-        name: 'Rookie Hustler #408',
+        name: 'Rookie AI Hustler #408',
         companyName: 'Independent Freelancer',
         netWorth: 450,
         stockTicker: 'FREE',
         stockPrice: 0.0,
         rank: 12,
+        type: 'AI_INCUMBENT',
         avatarEmoji: '🚴',
         sector: 'Gig Economy'
       }
@@ -173,30 +186,30 @@ export class MultiplayerClient {
     this.messages = [
       {
         id: 'MSG-01',
-        sender: 'SYSTEM',
+        sender: 'METROPOLIS WIRE',
         channel: 'GLOBAL',
-        text: 'Metropolis District #04 Room open. 64 Tycoons connected live.',
+        text: 'Metropolis District #04 Room open. Solo Founder connected.',
         timestamp: Date.now() - 120000
       },
       {
         id: 'MSG-02',
-        sender: 'Helena Drake',
+        sender: 'Helena Drake (AI)',
         channel: 'GLOBAL',
-        text: 'Anyone looking for quantum server supply contracts? 5,000 units/mo ready for delivery.',
+        text: 'Aegis Quantum is expanding into cryogenic data centers this quarter.',
         timestamp: Date.now() - 80000
       },
       {
         id: 'MSG-03',
-        sender: 'Kaito Kuroda',
+        sender: 'Kaito Kuroda (AI)',
         channel: 'WARFARE',
-        text: 'Heads up: SEC audits are high this quarter. Keep your cash accounts clean.',
+        text: 'SEC audits are active across high-growth startups. Maintain clean ledger accounts.',
         timestamp: Date.now() - 45000
       },
       {
         id: 'MSG-04',
-        sender: 'Victoria Vance',
+        sender: 'Victoria Vance (AI)',
         channel: 'MARKET_DEAL',
-        text: 'Bidding on 100k shares of newly incorporated startups. DM your cap table.',
+        text: 'Vance Capital is scouting early LLCs for angel investments.',
         timestamp: Date.now() - 15000
       }
     ];
@@ -205,13 +218,14 @@ export class MultiplayerClient {
   public getLeaderboard(playerNetWorth: number, playerCompanyName: string, playerTicker: string, playerStockPrice: number): PlayerProfile[] {
     const playerEntry: PlayerProfile = {
       playerId: 'PLAYER_YOU',
-      name: 'You (' + playerCompanyName + ')',
+      name: `${playerCompanyName} (You)`,
       companyName: playerCompanyName,
       netWorth: Math.max(0, playerNetWorth),
       stockTicker: playerTicker,
       stockPrice: playerStockPrice,
       rank: 1,
       isYou: true,
+      type: 'HUMAN',
       avatarEmoji: '👑',
       sector: playerNetWorth > 1000000 ? 'Conglomerate' : playerNetWorth > 50000 ? 'Enterprise' : 'Hustler'
     };

@@ -8,7 +8,11 @@ import {
   Flame,
   Send,
   Users,
-  Award
+  Award,
+  Bot,
+  UserCheck,
+  Share2,
+  KeyRound
 } from 'lucide-react';
 
 interface MultiplayerTabProps {
@@ -34,6 +38,9 @@ export const MultiplayerTab: React.FC<MultiplayerTabProps> = ({
   handleSendChat
 }) => {
   const [mobileSubTab, setMobileSubTab] = useState<'LEADERBOARD' | 'CHAT'>('LEADERBOARD');
+  const [roomCode, setRoomCode] = useState('METRO-04');
+  const [isCopied, setIsCopied] = useState(false);
+
   const leaderboard: PlayerProfile[] = multiplayer.getLeaderboard(
     playerNetWorth,
     playerCompanyName,
@@ -43,9 +50,47 @@ export const MultiplayerTab: React.FC<MultiplayerTabProps> = ({
 
   const yourRank = leaderboard.find((p) => p.isYou)?.rank || 12;
 
+  const handleCopyLink = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(window.location.href);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    }
+  };
+
   return (
     <div className="space-y-4 animate-fadeIn pb-12">
-      {/* Mobile Sub-Tab Switcher */}
+      {/* 1. ROOM STATUS & EXPLANATION BANNER */}
+      <div className="bg-gradient-to-r from-slate-900 via-cyan-950/20 to-slate-900 border border-slate-800 rounded-3xl p-4 md:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="p-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 flex-shrink-0">
+            <Globe2 className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-chakra font-bold text-base text-white">
+                Metropolis MMO District #04
+              </h3>
+              <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                1 Real Player (You)
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 mt-0.5">
+              You are currently competing in solo mode against <strong>12 AI Incumbent Megacorps & Hedge Funds</strong>. Scale your enterprise to conquer the #1 Forbes ranking!
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={handleCopyLink}
+          className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-chakra font-bold transition flex items-center gap-2 cursor-pointer flex-shrink-0"
+        >
+          <Share2 className="w-3.5 h-3.5 text-cyan-400" />
+          <span>{isCopied ? 'Link Copied!' : 'Invite Friends (Share Link)'}</span>
+        </button>
+      </div>
+
+      {/* 2. MOBILE SUB-TAB SWITCHER */}
       <div className="flex md:hidden bg-slate-900/80 border border-slate-800 rounded-2xl p-1 gap-1">
         <button
           onClick={() => setMobileSubTab('LEADERBOARD')}
@@ -67,10 +112,11 @@ export const MultiplayerTab: React.FC<MultiplayerTabProps> = ({
           }`}
         >
           <MessageSquare className="w-3.5 h-3.5" />
-          <span>Comms Hub ({multiplayer.messages.length})</span>
+          <span>Market Wire ({multiplayer.messages.length})</span>
         </button>
       </div>
 
+      {/* 3. MAIN COLUMNS */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* LEADERBOARD COLUMN */}
         <div
@@ -82,7 +128,7 @@ export const MultiplayerTab: React.FC<MultiplayerTabProps> = ({
             <div>
               <h3 className="font-chakra font-bold text-base text-white flex items-center gap-2">
                 <Trophy className="w-5 h-5 text-amber-400" />
-                <span>Metropolis Global Tycoon Leaderboard</span>
+                <span>Market Rivals & Forbes Rankings</span>
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
                 Real-time valuation rankings across all active metropolis enterprises.
@@ -124,7 +170,7 @@ export const MultiplayerTab: React.FC<MultiplayerTabProps> = ({
                       #{rankBadge}
                     </div>
                     <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-sm md:text-base">{player.avatarEmoji}</span>
                         <span
                           className={`font-chakra font-bold text-xs md:text-sm truncate ${
@@ -133,9 +179,13 @@ export const MultiplayerTab: React.FC<MultiplayerTabProps> = ({
                         >
                           {player.name}
                         </span>
-                        {isYou && (
-                          <span className="text-[10px] font-mono font-bold text-cyan-400 bg-cyan-500/20 px-1.5 py-0.2 rounded border border-cyan-500/40 flex-shrink-0">
-                            YOU
+                        {isYou ? (
+                          <span className="text-[9px] font-mono font-bold text-cyan-300 bg-cyan-500/20 px-1.5 py-0.2 rounded border border-cyan-500/40 flex-shrink-0 flex items-center gap-0.5">
+                            <UserCheck className="w-2.5 h-2.5" /> YOU (HUMAN)
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-mono font-bold text-slate-400 bg-slate-800/80 px-1.5 py-0.2 rounded border border-slate-700 flex-shrink-0 flex items-center gap-0.5">
+                            <Bot className="w-2.5 h-2.5 text-purple-400" /> AI RIVAL
                           </span>
                         )}
                       </div>
@@ -172,11 +222,11 @@ export const MultiplayerTab: React.FC<MultiplayerTabProps> = ({
           <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
             <h3 className="font-chakra font-bold text-sm text-white flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-cyan-400" />
-              <span>Metropolis Comms Hub</span>
+              <span>Metropolis Market Wire</span>
             </h3>
             <span className="text-[10px] font-mono text-emerald-400 flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              64 Live
+              Live Wire
             </span>
           </div>
 
@@ -200,7 +250,7 @@ export const MultiplayerTab: React.FC<MultiplayerTabProps> = ({
           <form onSubmit={handleSendChat} className="mt-3 pt-2.5 border-t border-slate-800 flex gap-2">
             <input
               type="text"
-              placeholder="Broadcast to city..."
+              placeholder="Broadcast to city wire..."
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               className="flex-1 bg-slate-800/80 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono placeholder:text-slate-500 focus:outline-none focus:border-cyan-400"
