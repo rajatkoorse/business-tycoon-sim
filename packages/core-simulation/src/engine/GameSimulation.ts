@@ -64,6 +64,7 @@ export interface SimulationSummary {
   cash: number;
   passiveRevenuePerSec: number;
   dailyLivingCost: number;
+  monthlyBills: number;
   dailyExpenses: number;
   regulatoryHeat: number;
   macroRegime: string;
@@ -108,6 +109,7 @@ export class GameSimulation {
 
   public btcPriceUSD: number = 68450;
   public currentDay: number = 1;
+  public totalSecondsElapsed: number = 0;
   public hqPrestige: number = 10;
   public perkTier: number = 1;
 
@@ -157,7 +159,7 @@ export class GameSimulation {
       rewardUSD: 240,
       xpReward: 60,
       energyCost: 20,
-      minSmarts: 25
+      minSmarts: 20
     },
     {
       id: 'GIG-05',
@@ -168,7 +170,7 @@ export class GameSimulation {
       rewardUSD: 380,
       xpReward: 85,
       energyCost: 22,
-      minSmarts: 30
+      minSmarts: 25
     },
     {
       id: 'GIG-06',
@@ -179,7 +181,7 @@ export class GameSimulation {
       rewardUSD: 450,
       xpReward: 95,
       energyCost: 25,
-      minSmarts: 35
+      minSmarts: 30
     },
 
     // Tier 2: Bachelor of Science
@@ -192,7 +194,7 @@ export class GameSimulation {
       rewardUSD: 1200,
       xpReward: 220,
       energyCost: 30,
-      minSmarts: 50
+      minSmarts: 45
     },
     {
       id: 'GIG-08',
@@ -203,7 +205,7 @@ export class GameSimulation {
       rewardUSD: 1850,
       xpReward: 300,
       energyCost: 32,
-      minSmarts: 55
+      minSmarts: 50
     },
     {
       id: 'GIG-09',
@@ -214,7 +216,7 @@ export class GameSimulation {
       rewardUSD: 2400,
       xpReward: 380,
       energyCost: 35,
-      minSmarts: 60
+      minSmarts: 55
     },
 
     // Tier 3: Master of Business Administration / CFA
@@ -227,7 +229,7 @@ export class GameSimulation {
       rewardUSD: 6500,
       xpReward: 850,
       energyCost: 40,
-      minSmarts: 75
+      minSmarts: 70
     },
     {
       id: 'GIG-11',
@@ -238,7 +240,7 @@ export class GameSimulation {
       rewardUSD: 9500,
       xpReward: 1200,
       energyCost: 45,
-      minSmarts: 80
+      minSmarts: 75
     },
 
     // Tier 4: Ph.D. & C-Suite Titan
@@ -251,7 +253,7 @@ export class GameSimulation {
       rewardUSD: 28000,
       xpReward: 3500,
       energyCost: 50,
-      minSmarts: 90
+      minSmarts: 85
     },
     {
       id: 'GIG-13',
@@ -262,7 +264,7 @@ export class GameSimulation {
       rewardUSD: 60000,
       xpReward: 6000,
       energyCost: 55,
-      minSmarts: 95
+      minSmarts: 90
     }
   ];
 
@@ -279,7 +281,7 @@ export class GameSimulation {
 
     this.workforce.clearStaff();
 
-    this.addLog("Born into the metropolis with $25 in your pocket, living in parents' garage. Hustle, study, solve challenges, and conquer the financial world!", 'SUCCESS');
+    this.addLog("Welcome to Metropolis. You have $25 cash and high school education. Do freelance work, take courses, and build your corporate empire in real-time!", 'SUCCESS');
   }
 
   public addLog(text: string, type: 'INFO' | 'WARN' | 'DANGER' | 'SUCCESS' = 'INFO') {
@@ -292,7 +294,7 @@ export class GameSimulation {
     if (this.eventLog.length > 60) this.eventLog.pop();
   }
 
-  // EXPORT COMPLETE GAME STATE (DATABASE DUMP)
+  // EXPORT STATE
   public exportState(): SerializedGameState {
     return {
       version: 1,
@@ -338,7 +340,7 @@ export class GameSimulation {
     };
   }
 
-  // IMPORT COMPLETE GAME STATE (DATABASE RESTORE)
+  // IMPORT STATE
   public importState(state: SerializedGameState): boolean {
     try {
       this.stage = state.stage as TycoonStage;
@@ -356,8 +358,7 @@ export class GameSimulation {
       this.hqPrestige = state.hqPrestige || 10;
       this.perkTier = state.perkTier || 1;
 
-      // Re-initialize ledger with saved cash
-      this.ledger = new LedgerEngine(state.cash || 25);
+      this.ledger = new LedgerEngine(state.cash !== undefined ? state.cash : 25);
 
       this.cryptoRigs = state.cryptoRigs || [];
       this.aiClusters = state.aiClusters || [];
@@ -367,8 +368,8 @@ export class GameSimulation {
       this.greyMarketOps = state.greyMarketOps || [];
 
       if (state.life) {
-        this.life.health = state.life.health ?? 85;
-        this.life.happiness = state.life.happiness ?? 60;
+        this.life.health = state.life.health ?? 100;
+        this.life.happiness = state.life.happiness ?? 85;
         this.life.smarts = state.life.smarts ?? 30;
         this.life.charisma = state.life.charisma ?? 20;
         this.life.energy = state.life.energy ?? 100;
@@ -387,7 +388,7 @@ export class GameSimulation {
         this.eventLog = state.eventLog;
       }
 
-      this.addLog('Game save restored successfully!', 'SUCCESS');
+      this.addLog('Game state loaded!', 'SUCCESS');
       return true;
     } catch (e) {
       console.error('Failed to import state:', e);
@@ -425,7 +426,7 @@ export class GameSimulation {
     if (this.life.energy < gig.energyCost) {
       return {
         allowed: false,
-        reason: `Low Energy (${this.life.energy}/${this.life.maxEnergy}). Rest or grab coffee!`
+        reason: `Low Energy (${Math.round(this.life.energy)}/${this.life.maxEnergy}). Rest a few seconds to recharge!`
       };
     }
 
@@ -512,8 +513,8 @@ export class GameSimulation {
       };
     } else {
       this.life.streakCount = 0;
-      this.life.happiness = Math.max(0, this.life.happiness - 4);
-      this.addLog(`FAILED challenge for "${gig.name}". Energy lost, streak reset.`, 'WARN');
+      this.life.happiness = Math.max(0, this.life.happiness - 2);
+      this.addLog(`FAILED challenge for "${gig.name}". Energy used, streak reset.`, 'WARN');
       return {
         success: true,
         isCorrect: false,
@@ -565,7 +566,7 @@ export class GameSimulation {
       this.addLog(`GRADUATED! Earned degree: ${program.name}! Higher tier jobs and businesses unlocked.`, 'SUCCESS');
       return { success: true, passed: true, question, message: `Congratulations! You passed the comprehensive exam and earned your ${program.name}!` };
     } else {
-      this.life.happiness = Math.max(0, this.life.happiness - 10);
+      this.life.happiness = Math.max(0, this.life.happiness - 5);
       this.addLog(`Failed ${program.name} exam. Tuition spent. Hit the books and try again!`, 'WARN');
       return { success: true, passed: false, question, message: `Failed exam. Correct answer: ${question.options[question.correctIndex]}. Study and re-attempt!` };
     }
@@ -598,7 +599,7 @@ export class GameSimulation {
     const data = WARDROBE_DATA[tier];
     const cash = this.ledger.getAccountBalance('ASSET:Cash');
     if (cash < data.buyCost) {
-      this.addLog(`Insufficient funds for wardrobe: $${data.buyCost.toLocaleString()}`, 'WARN');
+      this.addLog(`Insufficient funds for wardrobe: $${data.buyCost.toLocaleString()}\`, 'WARN');
       return false;
     }
 
@@ -758,87 +759,82 @@ export class GameSimulation {
     return true;
   }
 
-  // REAL-TIME TICK LOOP
-  public stepDailyTick(): SimulationSummary {
-    this.currentDay += 1;
-
-    const lifeTick = this.life.stepDaily();
-
-    const dailyLivingCost = lifeTick.billsDue;
-    const currentCash = this.ledger.getAccountBalance('ASSET:Cash');
-    if (currentCash >= dailyLivingCost) {
-      this.ledger.recordTransaction({
-        description: 'Daily Subsistence & Living Expenses',
-        debits: [{ account: 'EXPENSE:Lifestyle', amount: dailyLivingCost }],
-        credits: [{ account: 'ASSET:Cash', amount: dailyLivingCost }]
-      });
-    } else {
-      this.life.happiness = Math.max(0, this.life.happiness - 2);
-      this.life.health = Math.max(5, this.life.health - 2);
-      if (this.currentDay % 10 === 0) {
-        this.addLog("Overdue bills notice! Cash insufficient for living expenses. Health & happiness dropping!", 'DANGER');
-      }
+  // REAL-TIME TICK LOOP (Called every real-time second)
+  public stepRealtimeTick(): SimulationSummary {
+    this.totalSecondsElapsed += 1;
+    // 1 Real day = every 600 real seconds (10 minutes)
+    if (this.totalSecondsElapsed % 600 === 0) {
+      this.currentDay += 1;
+      this.life.ageDays += 1;
     }
 
-    const btcShock = (Math.random() - 0.49) * 0.02;
+    // Step Life Engine: Energy recharges (+0.5/sec)
+    const lifeTick = this.life.stepRealtimeSecond();
+
+    // Deduct real-time living expenses (fraction of a cent per sec)
+    const secBills = lifeTick.billsDue;
+    const currentCash = this.ledger.getAccountBalance('ASSET:Cash');
+    if (currentCash >= secBills && secBills > 0.000001) {
+      this.ledger.recordTransaction({
+        description: 'Real-time Living Expenses',
+        debits: [{ account: 'EXPENSE:Lifestyle', amount: secBills }],
+        credits: [{ account: 'ASSET:Cash', amount: secBills }]
+      });
+    }
+
+    // BTC Brownian motion
+    const btcShock = (Math.random() - 0.499) * 0.002;
     this.btcPriceUSD = Math.max(10000, this.btcPriceUSD * (1 + btcShock));
 
+    // Automated passive income from owned assets
     let totalPassiveIncomePerSec = 0;
     let totalPowerCostPerSec = 0;
 
     for (const rig of this.cryptoRigs) {
       if (rig.condition <= 0) continue;
-      const secCoins = rig.dailyCoinOutput / 86400 * 2000;
+      const secCoins = rig.dailyCoinOutput / 86400;
       const secPower = (rig.powerKw * 0.08) / 3600;
       totalPassiveIncomePerSec += secCoins * this.btcPriceUSD;
       totalPowerCostPerSec += secPower;
-      rig.condition = Math.max(0, rig.condition - 0.001);
+      rig.condition = Math.max(0, rig.condition - 0.00001);
     }
 
     for (const cluster of this.aiClusters) {
-      const secMRR = cluster.mrrGenerated / (30 * 86400) * 2000;
+      const secMRR = cluster.mrrGenerated / (30 * 86400);
       totalPassiveIncomePerSec += secMRR;
     }
 
     for (const building of this.realEstate) {
       const buildingRent = building.floors * 15000 * building.monthlyRentalPerSqFt * building.occupancyRate;
-      const secRent = buildingRent / (30 * 86400) * 2000;
+      const secRent = buildingRent / (30 * 86400);
       totalPassiveIncomePerSec += secRent;
     }
 
     for (const grey of this.greyMarketOps) {
-      const secYield = (grey.capitalDeployed * grey.dailyYieldRate) / 86400 * 2000;
+      const secYield = (grey.capitalDeployed * grey.dailyYieldRate) / 86400;
       totalPassiveIncomePerSec += secYield;
     }
 
+    // Workforce salaries per sec
     let totalSalariesPerSec = 0;
     for (const emp of this.workforce.getEmployees()) {
-      totalSalariesPerSec += emp.salary / (365 * 86400) * 2000;
+      totalSalariesPerSec += emp.salary / (365 * 86400);
     }
 
     const netCashFlowPerSec = totalPassiveIncomePerSec - totalPowerCostPerSec - totalSalariesPerSec;
 
-    if (netCashFlowPerSec > 0.01) {
+    if (netCashFlowPerSec > 0.0001) {
       this.ledger.recordTransaction({
         description: 'Automated Operations Yield',
         debits: [{ account: 'ASSET:Cash', amount: netCashFlowPerSec }],
         credits: [{ account: 'REVENUE:Operations', amount: netCashFlowPerSec }]
       });
-    } else if (netCashFlowPerSec < -0.01) {
-      const deduct = Math.min(this.ledger.getAccountBalance('ASSET:Cash'), Math.abs(netCashFlowPerSec));
-      if (deduct > 0) {
-        this.ledger.recordTransaction({
-          description: 'Operations Overhead Cost',
-          debits: [{ account: 'EXPENSE:Operations', amount: deduct }],
-          credits: [{ account: 'ASSET:Cash', amount: deduct }]
-        });
-      }
     }
 
     this.warfare.stepDailyHeatDecay();
 
     if (this.isIPOListed) {
-      const noise = (Math.random() - 0.495) * 0.01;
+      const noise = (Math.random() - 0.499) * 0.001;
       this.stockPrice = Math.max(0.5, this.stockPrice * (1 + noise));
     }
 
@@ -851,10 +847,13 @@ export class GameSimulation {
 
     let passiveSec = 0;
     for (const rig of this.cryptoRigs) {
-      passiveSec += (rig.dailyCoinOutput / 86400 * 2000) * this.btcPriceUSD;
+      passiveSec += (rig.dailyCoinOutput / 86400) * this.btcPriceUSD;
     }
     for (const c of this.aiClusters) {
-      passiveSec += c.mrrGenerated / (30 * 86400) * 2000;
+      passiveSec += c.mrrGenerated / (30 * 86400);
+    }
+    for (const b of this.realEstate) {
+      passiveSec += (b.floors * 15000 * b.monthlyRentalPerSqFt * b.occupancyRate) / (30 * 86400);
     }
 
     return {
@@ -867,8 +866,9 @@ export class GameSimulation {
       stockPrice: this.isIPOListed ? Number(this.stockPrice.toFixed(2)) : 0,
       marketCap: this.isIPOListed ? Math.round(this.stockPrice * this.totalShares) : (this.isIncorporated ? 500000 : 0),
       cash: Math.round(cash * 100) / 100,
-      passiveRevenuePerSec: Number(passiveSec.toFixed(2)),
+      passiveRevenuePerSec: Number(passiveSec.toFixed(3)),
       dailyLivingCost: this.life.getDailyLivingCost(),
+      monthlyBills: this.life.getMonthlyBills(),
       dailyExpenses: 0,
       regulatoryHeat: Math.round(this.warfare.getHeat()),
       macroRegime: macro.regime,

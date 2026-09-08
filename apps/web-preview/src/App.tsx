@@ -67,26 +67,22 @@ export default function App() {
   const [chatInput, setChatInput] = useState('');
   const [chatChannel, setChatChannel] = useState<'GLOBAL' | 'SYNDICATE' | 'WARFARE'>('GLOBAL');
 
-  // Real-Time Simulation Loop & Auto-Save
+  // Real-Time 1-Second Tick Loop (Steady, Real-World Pacing)
   useEffect(() => {
-    if (simSpeed === 0) return;
-
-    const intervalMs = Math.max(100, 1000 / simSpeed);
     let autoSaveCounter = 0;
 
     const timer = setInterval(() => {
-      sim.stepDailyTick();
+      sim.stepRealtimeTick();
       setSummary(sim.getSummary());
       setEventLogs([...sim.eventLog]);
 
-      // Periodic Auto-Save to Database (every 5 seconds)
       autoSaveCounter += 1;
-      if (autoSaveCounter % 5 === 0) {
+      if (autoSaveCounter % 10 === 0) {
         StorageManager.saveToLocalStorage(sim);
       }
 
       // Market simulation (if listed)
-      if (sim.isIPOListed && Math.random() < 0.4) {
+      if (sim.isIPOListed && Math.random() < 0.2) {
         const side = Math.random() > 0.5 ? OrderSide.BUY : OrderSide.SELL;
         const delta = (Math.random() - 0.5) * 1.5;
         const price = Number((summary.stockPrice + delta).toFixed(2));
@@ -101,10 +97,10 @@ export default function App() {
         setOrderBook(multiplayer.matchingEngine.getDepth(6));
         setTradeHistory(multiplayer.matchingEngine.getTradeHistory());
       }
-    }, intervalMs);
+    }, 1000);
 
     return () => clearInterval(timer);
-  }, [simSpeed, summary.stockPrice]);
+  }, [summary.stockPrice]);
 
   const handleRefresh = () => {
     StorageManager.saveToLocalStorage(sim);
@@ -213,7 +209,7 @@ export default function App() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#06080e] text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-black">
+    <div className="min-h-screen bg-[#06080e] text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-black overflow-y-auto">
       {/* 1. TOP EXECUTIVE TELEMETRY HEADER */}
       <ExecutiveHeader
         summary={summary}
